@@ -1,0 +1,52 @@
+name: Daily Script Runner
+
+on:
+  schedule:
+    - cron: '0 3 * * *'  # Runs daily at 3 UTC
+  workflow_dispatch:  # Allows manual triggering of the workflow
+
+jobs:
+  run-script:
+    runs-on: ubuntu-latest
+
+    # API token and database / page IDs for scripts
+    environment: notion
+    env:
+      NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
+      SUMMARY_PAGE_ID: ${{ vars.SUMMARY_PAGE_ID }}
+      DAILY_DATABASE_ID: ${{ vars.DAILY_DATABASE_ID }}
+      WEEKLY_DATABASE_ID: ${{ vars.WEEKLY_DATABASE_ID }}
+
+    steps:
+      # Get current day
+      - name: Current day
+        id: day
+        run: echo "::set-output name=day::$(date +'%A')"
+      
+      # Check out the repository
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Set up Python
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      # Install Pipenv
+      - name: Install pipenv
+        run: pip install pipenv
+
+      # Install dependencies using Pipenv
+      - name: Install dependencies
+        run: pipenv install
+
+      # Run the script to add daily habit
+      - name: Run daily script once
+        run: pipenv run python run.py --type daily
+
+      # Run the script again if it's Monday
+      - name: Run weekly script on Monday
+        if: ${{ steps.day.outputs.day == 'Monday' }}
+        run: pipenv run python run.py --type weekly
+  
