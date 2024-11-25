@@ -109,7 +109,7 @@ class NotionDatabase:
             id (str): Identifier for database
         """
         # Set basic attributes
-        self.id = id
+        self._id = id
         self.client = client
 
         # Load properties from API
