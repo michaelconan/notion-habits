@@ -109,7 +109,7 @@ class NotionDatabase:
             id (str): Identifier for database
         """
         # Set basic attributes
-        self.id = id
+        self._id = id
         self.client = client
 
         # Load properties from API
@@ -430,7 +430,7 @@ class NotionField:
                     }
                 ]
             }
-        if self.type == FieldType.RICH_TEXT:
+        elif self.type == FieldType.RICH_TEXT:
             return {
                 "rich_text": [
                     {
@@ -440,17 +440,22 @@ class NotionField:
                     }
                 ]
             }
-        if self.type == FieldType.DATE:
+        elif self.type == FieldType.DATE:
             return {
                 "date": {
                     "start": self.value.isoformat(),
                 }
             }
-        if self.type == FieldType.RELATION:
+        elif self.type == FieldType.RELATION:
             return {
                 "relation": [{
                     "id": self.value,
                 }]
+            }
+        else:
+            # fallback to type: value
+            return {
+                self.type: self.value,
             }
 
 
@@ -462,6 +467,7 @@ class FieldType(enum.Enum):
     RELATION = "relation"
     RICH_TEXT = "rich_text"
     CHECKBOX = "checkbox"
+    NUMBER = "number"
     MULTI_SELECT = "multi_select"
     FORMULA = "formula"
 
@@ -480,16 +486,18 @@ class FieldType(enum.Enum):
         # Return enum value based on variable type
         if isinstance(value, date):
             return cls.DATE
-        if isinstance(value, str):
+        elif isinstance(value, str):
             # Detect GUID format used for links
             if re.match(GUID_FORMAT, value):
                 return cls.RELATION
             else:
                 return cls.RICH_TEXT
-        if isinstance(value, bool):
+        elif isinstance(value, bool):
             return cls.CHECKBOX
-        if isinstance(value, list):
+        elif isinstance(value, list):
             return cls.MULTI_SELECT
+        elif isinstance(value, (int, float)):
+            return cls.NUMBER
 
     def parse(self, details: dict | bool) -> Any:
         """Parse Notion API payload based on field type
@@ -508,7 +516,7 @@ class FieldType(enum.Enum):
         if self.value == "relation":
             # NOTE: relations allow multi-select, but just using first currently
             return details[0]["id"]
-        if self.value in ("checkbox", "multi_select"):
+        if self.value in ("checkbox", "number", "multi_select"):
             return details
         if self.value == "formula":
             return details[details["type"]]

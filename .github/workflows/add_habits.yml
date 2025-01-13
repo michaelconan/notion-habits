@@ -21,7 +21,7 @@ jobs:
       # Get current day
       - name: Current day
         id: day
-        run: echo "::set-output name=day::$(date +'%A')"
+        run: echo "day=$(date +'%A')" >> $GITHUB_OUTPUT
       
       # Check out the repository
       - name: Checkout code
