@@ -55,7 +55,7 @@ class NotionClient:
         """
         self.__api_key = api_key
 
-    def _request(self, endpoint: str, method: str, payload: dict = None) -> dict:
+    def request(self, endpoint: str, method: str, payload: dict = None) -> dict:
         """Make request to Notion API
 
         Args:
@@ -85,18 +85,30 @@ class NotionClient:
         else:
             raise requests.RequestException(response.text, response=response)
 
-    def get_database(self, database_id: str) -> "NotionDatabase":
+    def get_database(self, database_id: str = None, database_name: str = None) -> "NotionDatabase":
         """Get Notion database object using client integration
 
         Args:
             database_id (str): Identifier for Notion database
+            database_name (str): Name of Notion database
 
         Returns:
             NotionDatabase: Database object from Notion page
+        
+        Raises:
+            NotionException: No database found with provided identifier or name
         """
         # Get database using client and identifier
-        return NotionDatabase(client=self, id=database_id)
-
+        if database_id:
+            return NotionDatabase(client=self, id=database_id)
+        elif database_name:
+            result = self.request("/search", "POST", {
+                "query": database_name,
+                "filter": {"property": "object", "value": "database"},
+            })
+            if result["results"]:
+                return NotionDatabase(client=self, id=result["results"][0]["id"])
+        raise NotionException("No database found with provided identifier or name")
 
 class NotionDatabase:
     """Structured set of Notion pages with defined properties"""
@@ -118,7 +130,7 @@ class NotionDatabase:
     def _load_properties(self):
         """Retrieve and store properties defined for database"""
         # Get details of database from API
-        details = self.client._request(
+        details = self.client.request(
             endpoint=f"/databases/{self.id}", method="GET")
 
         # Set metadata fields as object properties
@@ -167,7 +179,7 @@ class NotionDatabase:
             list[NotionRecord]: Records returned from database query
         """
         # Query a Notion database using query parameters
-        results = self.client._request(
+        results = self.client.request(
             f"/databases/{self.id}/query", "POST", params)
         # Parse results to record objects
         return [
@@ -335,11 +347,11 @@ class NotionRecord:
         """
         # If ID is set (record exists), update
         if self._id:
-            result = self._parent.client._request(
+            result = self._parent.client.request(
                 f"/pages/{self._id}", "PATCH", self._get_api_body())
         else:
             # Create new page and retrieve ID
-            result = self._parent.client._request(
+            result = self._parent.client.request(
                 "/pages", "POST", self._get_api_body())
             self._id = result["id"]
 
@@ -462,14 +474,25 @@ class NotionField:
 class FieldType(enum.Enum):
     """Notion field types and conversion methods"""
 
-    TITLE = "title"
+    CHECKBOX = "checkbox"
+    CREATED_BY = "created_by"
+    CREATED_TIME = "created_time"
     DATE = "date"
+    EMAIL = "email"
+    ICON = "icon"
+    FILES = "files"
+    FORMULA = "formula"
+    LAST_EDITED_BY = "last_edited_by"
+    LAST_EDITED_TIME = "last_edited_time"
+    MULTI_SELECT = "multi_select"
+    NUMBER = "number"
+    PHOME_NUMBER = "phone_number"
     RELATION = "relation"
     RICH_TEXT = "rich_text"
-    CHECKBOX = "checkbox"
-    NUMBER = "number"
-    MULTI_SELECT = "multi_select"
-    FORMULA = "formula"
+    ROLLUP = "rollup"
+    SELECT = "select"
+    TITLE = "title"
+    URL = "url"
 
     @classmethod
     def detect(cls, value: Any) -> "FieldType":
@@ -484,7 +507,7 @@ class FieldType(enum.Enum):
         # Format of Notion identifier for relation fields
         GUID_FORMAT = r"\w{8}\-\w{4}\-\w{4}\-\w{4}\-\w{12}"
         # Return enum value based on variable type
-        if isinstance(value, date):
+        if isinstance(value, (date, datetime)):
             return cls.DATE
         elif isinstance(value, str):
             # Detect GUID format used for links
@@ -511,12 +534,14 @@ class FieldType(enum.Enum):
         # Parse values based on field type
         if self.value == "date":
             return date.fromisoformat(details["start"])
-        if self.value in ("title", "rich_text"):
-            return "".join(t["text"]["content"] for t in details)
-        if self.value == "relation":
-            # NOTE: relations allow multi-select, but just using first currently
-            return details[0]["id"]
-        if self.value in ("checkbox", "number", "multi_select"):
-            return details
-        if self.value == "formula":
+        elif self.value == "created_by":
+            return details["id"]
+        elif self.value in ("title", "rich_text"):
+            return "".join(t["plain_text"] for t in details)
+        elif self.value == "relation":
+            return [r["id"] for r in details]
+        elif self.value in ("formula", "rollup"):
             return details[details["type"]]
+        else:
+            # Simple values or adapters not identified
+            return details

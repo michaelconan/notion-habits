@@ -16,11 +16,11 @@ from .notion import NotionClient, NotionRecord
 logger: Logger = getLogger(__name__)
 RECORD_TYPES: dict = {
     "daily": {
-        "parent": "DAILY_DATABASE_ID",
+        "parent": "Daily Disciplines",
         "title": "Daily Habits:",
     },
     "weekly": {
-        "parent": "WEEKLY_DATABASE_ID",
+        "parent": "Weekly Disciplines",
         "title": "Week:",
     },
 }
@@ -51,10 +51,7 @@ def get_habit_page(page_type: str) -> NotionRecord:
 
     # Get and validate parent database ID from environment
     period_record = RECORD_TYPES[page_type]
-    parent_db = os.getenv(period_record["parent"])
-    if not parent_db:
-        raise EnvironmentError(
-            f"Unable to identify {page_type} database identifier in environment")
+    parent_db = period_record["parent"]
     logger.info(f"Adding habit record to parent database: {parent_db}")
 
     # Get record body and create page
@@ -63,7 +60,7 @@ def get_habit_page(page_type: str) -> NotionRecord:
         raise EnvironmentError("No Notion summary page identifier available")
 
     # Connect to Notion database
-    database = client.get_database(parent_db)
+    database = client.get_database(database_name=parent_db)
     # Create instance of Notion record and set date
     today = date.today()
     record = database.new_record(
@@ -85,7 +82,7 @@ def get_habit_page(page_type: str) -> NotionRecord:
                     }
                 ]
             })
-        record.prior_weekly_discipline = results[0]._id
+        record.prior_weekly_discipline = results[0].id
 
     # Provide page to commit
     return record

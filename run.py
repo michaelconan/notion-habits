@@ -1,3 +1,9 @@
+"""
+run.py
+
+Script to add habit record pages to Notion databases.
+"""
+
 # Base imports
 import argparse
 import logging
