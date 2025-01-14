@@ -106,8 +106,13 @@ class NotionClient:
                 "query": database_name,
                 "filter": {"property": "object", "value": "database"},
             })
-            if result["results"]:
-                return NotionDatabase(client=self, id=result["results"][0]["id"])
+            matched_results = [
+                d for d
+                in result["results"]
+                if "".join(t["plain_text"] for t in d["title"]) == database_name
+            ]
+            if matched_results:
+                return NotionDatabase(client=self, id=matched_results[0]["id"])
         raise NotionException("No database found with provided identifier or name")
 
 class NotionDatabase:
