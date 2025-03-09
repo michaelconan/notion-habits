@@ -31,3 +31,7 @@ def page_schema() -> dict:
             }
         }
     }
+
+@pytest.fixture(params=("daily", "weekly", "monthly"))
+def page_type(request) -> str:
+    return request.param

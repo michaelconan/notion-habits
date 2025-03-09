@@ -10,7 +10,7 @@ from logging import getLogger, Logger
 from datetime import date
 
 # Local imports
-from .notion import NotionClient, NotionRecord
+from src.notion import NotionClient, NotionRecord
 
 
 logger: Logger = getLogger(__name__)
@@ -23,8 +23,15 @@ RECORD_TYPES: dict = {
         "parent": "Weekly Disciplines",
         "title": "Week:",
     },
+    "monthly": {
+        "parent": "Monthly Disciplines",
+        "title": "Month:",
+    },
 }
 """dict: Mapping of habit record configurations for page properties"""
+
+ANALYTICS_DB_NAME: str = "Discipline Analytics"
+"""str: Name of the database for habit analytics"""
 
 
 def get_habit_page(page_type: str) -> NotionRecord:
@@ -35,7 +42,8 @@ def get_habit_page(page_type: str) -> NotionRecord:
 
     Raises:
         EnvironmentError: Missing Notion API key in environment
-        EnvironmentError: Missing summary page identifier in environment
+        LookupError: Unable to identify page type record for habits
+        LookupError: Unable to identify summary page identifier from analytics database
     """
     # Load and confirm API key available
     api_key = os.getenv("NOTION_API_KEY")
@@ -51,22 +59,31 @@ def get_habit_page(page_type: str) -> NotionRecord:
 
     # Get and validate parent database ID from environment
     period_record = RECORD_TYPES[page_type]
-    parent_db = period_record["parent"]
-    logger.info(f"Adding habit record to parent database: {parent_db}")
+    parent_db_name = period_record["parent"]
+    logger.info(f"Adding habit record to parent database: {parent_db_name}")
 
-    # Get record body and create page
-    summary_page = os.getenv("SUMMARY_PAGE_ID")
-    if not summary_page:
-        raise EnvironmentError("No Notion summary page identifier available")
-
-    # Connect to Notion database
-    database = client.get_database(database_name=parent_db)
+    # Connect to Notion databases
+    analytics_db = client.get_database(database_name=ANALYTICS_DB_NAME)
+    summary_results = analytics_db.query(
+        params={
+            "filter": {
+                "property": "Name",
+                "title": {
+                    "starts_with": parent_db_name.split(" ")[0]
+                }
+            }
+        })
+    if not summary_results:
+        raise LookupError(f"No summary page found for {parent_db_name}")
+    else:
+        summary_page = summary_results[0].id
+    database = client.get_database(database_name=parent_db_name)
     # Create instance of Notion record and set date
     today = date.today()
     record = database.new_record(
         name=f"{period_record['title']} {today.strftime('%b %d, %Y')}")
     record.date = today
-    record.habit_analytics = summary_page
+    record.discipline_analytics = summary_page
     logger.info(f"Created {page_type} habit record for database")
 
     # Make weekly-specifc updates
