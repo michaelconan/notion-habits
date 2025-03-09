@@ -1,4 +1,4 @@
-name: Daily Script Runner
+name: Add Notion Habits
 
 on:
   schedule:
@@ -13,15 +13,17 @@ jobs:
     environment: notion
     env:
       NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
-      SUMMARY_PAGE_ID: ${{ vars.SUMMARY_PAGE_ID }}
-      DAILY_DATABASE_ID: ${{ vars.DAILY_DATABASE_ID }}
-      WEEKLY_DATABASE_ID: ${{ vars.WEEKLY_DATABASE_ID }}
 
     steps:
-      # Get current day
-      - name: Current day
-        id: day
-        run: echo "day=$(date +'%A')" >> $GITHUB_OUTPUT
+      # Get current day of week
+      - name: Current day of week
+        id: day_of_week
+        run: echo "day_of_week=$(date +'%A')" >> $GITHUB_OUTPUT
+
+      # Get current day of the month
+      - name: Current day of the month
+        id: day_of_month
+        run: echo "day_of_month=$(date +'%d')" >> $GITHUB_OUTPUT
       
       # Check out the repository
       - name: Checkout code
@@ -42,11 +44,15 @@ jobs:
         run: pipenv install
 
       # Run the script to add daily habit
-      - name: Run daily script once
+      - name: Run daily script each day
         run: pipenv run python run.py --type daily
 
-      # Run the script again if it's Monday
+      # Run the weekly script if it's Monday
       - name: Run weekly script on Monday
-        if: ${{ steps.day.outputs.day == 'Monday' }}
+        if: ${{ steps.day_of_week.outputs.day_of_week == 'Monday' }}
         run: pipenv run python run.py --type weekly
   
+      # Run the monthly script if it's the first day of the month
+      - name: Run monthly script on the first day of the month
+        if: ${{ steps.day_of_month.outputs.day_of_month == '01' }}
+        run: pipenv run python run.py --type monthly

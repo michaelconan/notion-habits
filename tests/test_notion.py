@@ -1,25 +1,23 @@
 # Base imports
-import os
 import json
 import logging
 
 # PyPI imports
-import pytest
 from jsonschema import validate
 
 # Local imports
 from src.notion import NotionClient, NotionRecord
-from src.habits import get_habit_page
+from src.habits import get_habit_page, RECORD_TYPES
 
 
-def test_query_database(api_key: str):
+def test_query_database(api_key: str, page_type: str):
 
     # GIVEN
     # Get weekly database identifier from environment
-    weekly_db = os.getenv("WEEKLY_DATABASE_ID")
+    db_name = RECORD_TYPES[page_type]["parent"]
     page_size = 5
     client = NotionClient(api_key=api_key)
-    database = client.get_database(weekly_db)
+    database = client.get_database(database_name=db_name)
 
     # WHEN
     # Call the Notion database query API
@@ -33,8 +31,7 @@ def test_query_database(api_key: str):
     assert len(results) == page_size
 
 
-@pytest.mark.parametrize("page_type", ("weekly", "daily"))
-def test_habit_record(api_key: str, page_schema: dict, page_type: str):
+def test_habit_record(page_schema: dict, page_type: str):
 
     # GIVEN
     # Get configurations based on page type
