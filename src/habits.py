@@ -99,7 +99,9 @@ def get_habit_page(page_type: str) -> NotionRecord:
                     }
                 ]
             })
+        # Update record with prior week details
         record.prior_weekly_discipline = results[0].id
+        record.days = results[0].days
 
     # Provide page to commit
     return record

@@ -4,7 +4,7 @@ Simple Python application to create daily and weekly habit tracker records in No
 
 ## Background
 
-I use Notion as a habit tracker, among other things. Habits are tracked daily and weekly - a new row (page) needs to be added to the databases each day / week to record the habits.
+I use Notion as a habit tracker, among other things. Habits are tracked daily weekly, and monthly - a new row (page) needs to be added to the databases each day / week to record the habits.
 
 Notion does not appear to have functionality to add these pages automatically, so I have used a few techniques to handle this:
 
@@ -22,6 +22,9 @@ pipenv run python ./run.py --type daily
 
 # Add weekly habit record
 pipenv run python ./run.py --type weekly
+
+# Add monthly habit record
+pipenv run python ./run.py --type monthly
 ```
 
 ## Dependencies
