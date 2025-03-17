@@ -472,7 +472,7 @@ class NotionField:
         else:
             # fallback to type: value
             return {
-                self.type: self.value,
+                self.type.value: self.value,
             }
 
 
