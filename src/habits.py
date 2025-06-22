@@ -30,7 +30,7 @@ RECORD_TYPES: dict = {
 }
 """dict: Mapping of habit record configurations for page properties"""
 
-ANALYTICS_DB_NAME: str = "Discipline Analytics"
+ANALYTICS_DB_NAME: str = "Habit Analytics"
 """str: Name of the database for habit analytics"""
 
 
