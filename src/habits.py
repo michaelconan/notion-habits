@@ -62,9 +62,9 @@ def get_habit_page(page_type: str) -> NotionRecord:
     parent_db_name = period_record["parent"]
     logger.info(f"Adding habit record to parent database: {parent_db_name}")
 
-    # Connect to Notion databases
-    analytics_db = client.get_database(database_name=ANALYTICS_DB_NAME)
-    summary_results = analytics_db.query(
+    # Connect to Notion data sources
+    analytics_ds = client.get_data_source(data_source_name=ANALYTICS_DB_NAME)
+    summary_results = analytics_ds.query(
         params={
             "filter": {
                 "property": "Name",
@@ -77,10 +77,10 @@ def get_habit_page(page_type: str) -> NotionRecord:
         raise LookupError(f"No summary page found for {parent_db_name}")
     else:
         summary_page = summary_results[0].id
-    database = client.get_database(database_name=parent_db_name)
+    data_source = client.get_data_source(data_source_name=parent_db_name)
     # Create instance of Notion record and set date
     today = date.today()
-    record = database.new_record(
+    record = data_source.new_record(
         name=f"{period_record['title']} {today.strftime('%b %d, %Y')}")
     record.date = today
     record.discipline_analytics = summary_page
@@ -89,7 +89,7 @@ def get_habit_page(page_type: str) -> NotionRecord:
     # Make weekly-specifc updates
     if page_type == "weekly":
         # For weekly habit tasks, get latest week to link
-        results = database.query(
+        results = data_source.query(
             params={
                 "page_size": 1,
                 "sorts": [
@@ -101,7 +101,7 @@ def get_habit_page(page_type: str) -> NotionRecord:
             })
         # Update record with prior week details
         record.prior_weekly_discipline = results[0].id
-        record.days = results[0].days
+        record.days_prayed = results[0].days_prayed
 
     # Provide page to commit
     return record
