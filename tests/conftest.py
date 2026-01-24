@@ -21,7 +21,7 @@ def page_schema() -> dict:
             "parent": {
                 "type": "object",
                 "properties": {
-                    "database_id": {
+                    "data_source_id": {
                         "type": "string"
                     }
                 }

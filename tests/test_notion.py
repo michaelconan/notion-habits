@@ -10,20 +10,21 @@ from src.notion import NotionClient, NotionRecord
 from src.habits import get_habit_page, RECORD_TYPES
 
 
-def test_query_database(api_key: str, page_type: str):
+def test_query_data_source(api_key: str, page_type: str):
 
     # GIVEN
     # Get weekly database identifier from environment
     db_name = RECORD_TYPES[page_type]["parent"]
     page_size = 5
     client = NotionClient(api_key=api_key)
-    database = client.get_database(database_name=db_name)
+    data_source = client.get_data_source(data_source_name=db_name)
 
     # WHEN
-    # Call the Notion database query API
-    results = database.query(params={
+    # Call the Notion data source query API
+    results = data_source.query(params={
         "page_size": page_size,
     })
+    logging.info(f"{len(results)} results returned")
 
     # THEN
     # Validate results and data types

@@ -42,7 +42,7 @@ class NotionClient:
 
     BASE_URL = "https://api.notion.com/v1"
     """str: Base link for API endpoints"""
-    API_VERSION = "2022-06-28"
+    API_VERSION = "2025-09-03"
     """str: API version to use in requests"""
     METADATA_FIELDS = ["id", "url", "created_time", "last_edited_time"]
     """list[str]: Metadata fields related to all Notion objects"""
@@ -85,45 +85,45 @@ class NotionClient:
         else:
             raise requests.RequestException(response.text, response=response)
 
-    def get_database(self, database_id: str = None, database_name: str = None) -> "NotionDatabase":
-        """Get Notion database object using client integration
+    def get_data_source(self, data_source_id: str = None, data_source_name: str = None) -> "NotionDataSource":
+        """Get Notion data source object using client integration
 
         Args:
-            database_id (str): Identifier for Notion database
-            database_name (str): Name of Notion database
+            data_source_id (str): Identifier for Notion data source
+            data_source_name (str): Name of Notion data source
 
         Returns:
-            NotionDatabase: Database object from Notion page
+            NotionDataSource: Data source object from Notion page
         
         Raises:
-            NotionException: No database found with provided identifier or name
+            NotionException: No data source found with provided identifier or name
         """
-        # Get database using client and identifier
-        if database_id:
-            return NotionDatabase(client=self, id=database_id)
-        elif database_name:
+        # Get data source using client and identifier
+        if data_source_id:
+            return NotionDataSource(client=self, id=data_source_id)
+        elif data_source_name:
             result = self.request("/search", "POST", {
-                "query": database_name,
-                "filter": {"property": "object", "value": "database"},
+                "query": data_source_name,
+                "filter": {"property": "object", "value": "data_source"},
             })
             matched_results = [
                 d for d
                 in result["results"]
-                if "".join(t["plain_text"] for t in d["title"]) == database_name
+                if "".join(t["plain_text"] for t in d["title"]) == data_source_name
             ]
             if matched_results:
-                return NotionDatabase(client=self, id=matched_results[0]["id"])
-        raise NotionException("No database found with provided identifier or name")
+                return NotionDataSource(client=self, id=matched_results[0]["id"])
+        raise NotionException("No data source found with provided identifier or name")
 
-class NotionDatabase:
+class NotionDataSource:
     """Structured set of Notion pages with defined properties"""
 
     def __init__(self, client: NotionClient, id: str):
-        """Constructor for Notion database
+        """Constructor for Notion data source
 
         Args:
             client (NotionClient): Initialized client with credentials
-            id (str): Identifier for database
+            id (str): Identifier for data source
         """
         # Set basic attributes
         self._id = id
@@ -133,10 +133,10 @@ class NotionDatabase:
         self._load_properties()
 
     def _load_properties(self):
-        """Retrieve and store properties defined for database"""
-        # Get details of database from API
+        """Retrieve and store properties defined for data source"""
+        # Get details of data source from API
         details = self.client.request(
-            endpoint=f"/databases/{self.id}", method="GET")
+            endpoint=f"/data_sources/{self.id}", method="GET")
 
         # Set metadata fields as object properties
         for field in self.client.METADATA_FIELDS:
@@ -157,35 +157,35 @@ class NotionDatabase:
             No setter method to prevent override
 
         Returns:
-            str: Identifier for database
+            str: Identifier for data source
         """
         return self._id
 
     @property
     def properties(self) -> dict[str, str]:
-        """Slugified database properties (schema)
+        """Slugified data source properties (schema)
 
         Returns:
-            dict[str, str]: Database properties
+            dict[str, str]: Data source properties
         """
         return {get_slug(k): v for k, v in self._properties.items()}
 
     def query(self, params: dict) -> list["NotionRecord"]:
-        """Query a Notion database with parameters
+        """Query a Notion data source with parameters
 
         Args:
-            params (dict): Parameters for database query
+            params (dict): Parameters for data source query
 
         Notes:
             Define filters for the query request using 
-            `Notion structure.<https://developers.notion.com/reference/post-database-query>`_
+            `Notion structure.<https://developers.notion.com/reference/post-data-source-query>`_
 
         Returns:
-            list[NotionRecord]: Records returned from database query
+            list[NotionRecord]: Records returned from data source query
         """
-        # Query a Notion database using query parameters
+        # Query a Notion data source using query parameters
         results = self.client.request(
-            f"/databases/{self.id}/query", "POST", params)
+            f"/data_sources/{self.id}/query", "POST", params)
         # Parse results to record objects
         return [
             NotionRecord.from_api(parent=self, payload=result)
@@ -193,27 +193,27 @@ class NotionDatabase:
         ]
 
     def new_record(self, name: str) -> "NotionRecord":
-        """Create a new record for the database
+        """Create a new record for the data source
 
         Args:
-            name (str): Value for title field of database
+            name (str): Value for title field of data source
 
         Returns:
-            NotionRecord: Record instance for database row
+            NotionRecord: Record instance for data source row
         """
-        # Get record with name and parent database reference
+        # Get record with name and parent data source reference
         return NotionRecord(name=name, parent=self)
 
 
 class NotionRecord:
-    """Representation of a row page in a database collection"""
+    """Representation of a row page in a data source collection"""
 
-    def __init__(self, name: str, parent: "NotionDatabase"):
-        """Constructor for new Database Record (row)
+    def __init__(self, name: str, parent: "NotionDataSource"):
+        """Constructor for new Data Source Record (row)
 
         Args:
-            name (str): Value for title field of database
-            parent (NotionDatabase): Parent database for record.
+            name (str): Value for title field of data source
+            parent (NotionDataSource): Parent data source for record.
         """
         # Set initial properties
         self._id = None
@@ -226,11 +226,11 @@ class NotionRecord:
         return "<{} ({})>".format(self.__class__.__name__, self.name.value)
 
     @classmethod
-    def from_api(cls, parent: NotionDatabase, payload: dict) -> "NotionRecord":
+    def from_api(cls, parent: NotionDataSource, payload: dict) -> "NotionRecord":
         """Create instance from API response
 
         Args:
-            parent (NotionDatabase): Database to which record belongs
+            parent (NotionDataSource): Data source to which record belongs
             payload (dict): Payload retrieved from Notion API
 
         Returns:
@@ -321,11 +321,11 @@ class NotionRecord:
         """
         properties = dict()
 
-        # Check for record properties not on database
+        # Check for record properties not on data source
         invalid_properties = [
             k for k in self.fields.keys() if k not in self._parent.properties]
         if invalid_properties:
-            raise NotionException(f"Record properties do not exist on parent database: {
+            raise NotionException(f"Record properties do not exist on parent data source: {
                                   ', '.join(invalid_properties)}")
 
         # Format all NotionField properties for API requests
@@ -340,7 +340,7 @@ class NotionRecord:
             "parent": {},
         }
         if self._parent:
-            body["parent"]["database_id"] = self._parent.id
+            body["parent"]["data_source_id"] = self._parent.id
 
         return body
 
